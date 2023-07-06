@@ -35,13 +35,15 @@ fetch_lfs_pumf <- function(
         "https://www150.statcan.gc.ca/",
         "n1/pub/71m0001x/2021001/hist/{year}-CSV.zip"
     )
-    zip_path <- glue::glue("data/raw/{year}-CSV.zip")
-    csv_dir <- glue::glue("data/raw/{year}")
+    zip_path <- glue::glue("{cache_dir}/{year}-CSV.zip")
+    csv_dir <- glue::glue("{cache_dir}/{year}")
 
     if (!fs::dir_exists(csv_dir)) fs::dir_create(csv_dir)
 
     curl::curl_fetch_disk(u, zip_path)
     unzip(zip_path, exdir = csv_dir)
+    fs::file_delete(zip_path)
+    invisible()
 }
 
 #' Read LFS PUMF
@@ -49,7 +51,7 @@ fetch_lfs_pumf <- function(
 #' @return A list with two elements: records and codebook
 read_lfs_pumf <- function(dir) {
     records <- .read_lfs_records(dir)
-    codebook <- .read_lfs_codebook(dir)
+    codebook <- suppressWarnings(.read_lfs_codebook(dir))
     list(records = records, codebook = codebook)
 }
 
@@ -69,7 +71,7 @@ read_lfs_pumf <- function(dir) {
 .read_lfs_codebook <- function(dir) {
     path <- glue::glue("{dir}/LFS_PUMF_EPA_FGMD_codebook.csv")
 
-    d <- readr::read_csv(path) |>
+    d <- readr::read_csv(path, show_col_types = FALSE) |>
         janitor::clean_names() |>
         dplyr::transmute(
             var = variable_variable,
@@ -115,7 +117,14 @@ read_lfs_pumf <- function(dir) {
         dplyr::filter(
             !(is_factor & is.na(factor_level))
         ) |>
-        dplyr::select(field_id, var_name, var_label, is_factor, factor_level, factor_label)
+        dplyr::select(
+            field_id,
+            var_name,
+            var_label,
+            is_factor,
+            factor_level,
+            factor_label
+        )
 
 
     var_labels <- d |>
@@ -134,7 +143,7 @@ read_lfs_pumf <- function(dir) {
                 setNames(c(glue::glue("{.x}"), glue::glue("{.x}_label")))
         }))
 
-    var_labels |> dplyr::left_join(factor_labels)
+    suppressMessages(dplyr::left_join(var_labels, factor_labels))
 }
 
 #' Produce a data frame (tibble) with labelled vectors encoded as factors
@@ -143,7 +152,7 @@ read_lfs_pumf <- function(dir) {
 #' @param codebook A data frame (tibble) of codebook
 #' @return A data frame (tibble) with labelled vectors encoded as factors
 #' @export
-encode_factors <- function(records, codebook) {
+encode_lfs_factors <- function(records, codebook) {
     d <- records |>
         dplyr::mutate(
             NAICS_21_code = NAICS_21,
