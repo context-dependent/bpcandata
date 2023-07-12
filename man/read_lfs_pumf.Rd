@@ -3,12 +3,15 @@
 \name{read_lfs_pumf}
 \alias{read_lfs_pumf}
 \alias{.read_lfs_records}
+\alias{.correct_decimal_placement}
 \alias{.read_lfs_codebook}
 \title{Read LFS PUMF}
 \usage{
 read_lfs_pumf(dir)
 
 .read_lfs_records(dir)
+
+.correct_decimal_placement(x)
 
 .read_lfs_codebook(dir)
 }
