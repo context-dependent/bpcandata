@@ -280,7 +280,7 @@ roxygenize_lfs_codebook <- function(records, codebook, year) {
 .cb_column__factor <- function(col) {
     head <- glue::glue(
         "#'   ",
-        r"(\item{\code{<<col$var_name>>} \code{<fct>} <<col$var_label>>)",
+        r"(\item{\code{<<col$var_name>>} \code{<fct>} <<col$var_label>>}{)",
         .open = "<<", .close = ">>"
     )
 
