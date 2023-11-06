@@ -87,7 +87,8 @@ read_lfs_pumf <- function(dir) {
         dplyr::transmute(
             var = variable_variable,
             field_id = field_champ,
-            label = english_label_etiquette_anglais
+            label = english_label_etiquette_anglais,
+            universe = english_universe_univers_anglais
         ) |>
         dplyr::filter(
             !is.na(label),
@@ -102,6 +103,10 @@ read_lfs_pumf <- function(dir) {
                 is.na(field_id) ~ NA_character_,
                 TRUE ~ label
             ),
+            var_universe = dplyr::case_when(
+                is.na(field_id) ~ NA_character_,
+                TRUE ~ universe
+            ),
             factor_level = dplyr::case_when(
                 !is.na(field_id) ~ NA_character_,
                 TRUE ~ var
@@ -111,7 +116,7 @@ read_lfs_pumf <- function(dir) {
                 TRUE ~ label
             )
         ) |>
-        tidyr::fill(field_id, var_name, var_label) |>
+        tidyr::fill(field_id, var_name, var_label, var_universe) |>
         dplyr::group_by(var_name) |>
         dplyr::mutate(
             is_factor = sum(!is.na(factor_level)) > 1,
@@ -132,6 +137,7 @@ read_lfs_pumf <- function(dir) {
             field_id,
             var_name,
             var_label,
+            var_universe,
             is_factor,
             factor_level,
             factor_label
@@ -139,12 +145,12 @@ read_lfs_pumf <- function(dir) {
 
 
     var_labels <- d |>
-        dplyr::group_nest(field_id, var_name, var_label, is_factor) |>
+        dplyr::group_nest(field_id, var_name, var_label, var_universe, is_factor) |>
         dplyr::select(-data)
 
     factor_labels <- d |>
         dplyr::filter(is_factor) |>
-        dplyr::select(-var_label, -is_factor) |>
+        dplyr::select(-var_label, -is_factor, -var_universe) |>
         dplyr::group_nest(field_id, var_name, .key = "factor_labels") |>
         dplyr::mutate(factor_labels = purrr::map2(var_name, factor_labels, ~ {
             .y |>
@@ -270,7 +276,7 @@ roxygenize_lfs_codebook <- function(records, codebook, year) {
     col_range <- records[[col$var_name]] |> range(na.rm = TRUE)
     glue::glue(
         "#'   ",
-        r"(\item{\code{<<col$var_name>>} \code{<num>} <<col$var_label>> [<<col_range[1]>>, <<col_range[2]>>]})",
+        r"(\item{\code{<<col$var_name>>} \code{<num>} <<col$var_label>> [<<col_range[1]>>, <<col_range[2]>>] \code{for} <<col$var_universe>>})",
         .open = "<<", .close = ">>"
     )
 }
@@ -280,7 +286,7 @@ roxygenize_lfs_codebook <- function(records, codebook, year) {
 .cb_column__factor <- function(col) {
     head <- glue::glue(
         "#'   ",
-        r"(\item{\code{<<col$var_name>>} \code{<fct>} <<col$var_label>>}{)",
+        r"(\item{\code{<<col$var_name>>} \code{<fct>} <<col$var_label>> \code{for} <<col$var_universe>>}{)",
         .open = "<<", .close = ">>"
     )
 
