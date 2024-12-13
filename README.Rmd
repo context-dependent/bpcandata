@@ -1,0 +1,110 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# bpcandata
+
+The goal of bpcandata is to make StatCan public use microdata files easier to access and work with in R. 
+
+## Installation
+
+You can install the development version of bpcandata from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("context-dependent/bpcandata")
+```
+
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+```{r example}
+library(bpcandata)
+library(tidyverse)
+```
+
+## Loading the data
+
+`fetch_lfs_pumf` downloads the LFS PUMF files for a given year (or vector of multiple years) and extracts them to a specfied `cache_dir`. 
+In this case, we download the 2015 LFS PUMF files to the `"./local"` directory.
+`read_lfs_pumf` reads the LFS PUMF files from the specified directory, returning a list of two data frames: `records` and `codebook`.
+
+```{r load_data}
+fetch_lfs_pumf(2015, cache_dir = "local")
+d15 <- read_lfs_pumf("local/2015")
+
+d15$records |> head()
+
+d15$codebook |> head()
+```
+
+To view the codebook in a human readable format, run `?bpcandata::read_lfs_pumf` in the R console. 
+
+## Applying the codebook
+
+```{r apply_codebook}
+d15_labelled <- encode_lfs_factors(d15$records, d15$codebook)
+
+d15_labelled |> head()
+```
+
+`encode_lfs_factors` applies the codebook to the records data frame, converting the factor codes to their corresponding labels.
+
+## Point estimates using FINALWT
+
+If you aren't concerned with sampling variability, you can use the `FINALWT` column as frequency weights to calculate totals, means, and proportions.
+
+```{r point_estimates}
+d15_labelled |>
+  group_by(SURVMNTH, LFSSTAT) |>
+  summarize(
+    n = sum(FINALWT)
+  ) |>
+  pivot_wider(names_from = LFSSTAT, values_from = n)
+```
+
+## Estimating sampling variability with bootstrap weights
+
+If sampling variability is important, generate appropriately calibrated bootstrap replicate weights with `generate_lfs_bootstrap_weights`.
+
+```{r generate_weights}
+repwt15 <- generate_lfs_bootstrap_weights(d15_labelled, 100)
+```
+
+## Tabulating bootstrap estimates
+
+`bpcandata` provides functions for tabulating grouped totals and means with bootstrap replicate weights. 
+
+```{r tabulate_bootstrap}
+d15_labelled$REPWT <- repwt15
+
+d15_labelled |>
+  group_by(SURVMNTH, LFSSTAT) |>
+  summarize(
+    n = lfs_bs_total(REPWT, FINALWT)
+  ) |>
+  unpack(n, names_sep = "_") |>
+  head()
+
+d15_labelled |>
+  group_by(SURVMNTH) |>
+  filter(
+    LFSSTAT %in% c("Unemployed", "Not in labour force"),
+    EVERWORK != "No, never worked"
+  ) |>
+  summarize(mean_wks_away = lfs_bs_mean(DURJLESS, REPWT, FINALWT)) |>
+  unpack(mean_wks_away, names_sep = "_") |>
+  head()
+```
