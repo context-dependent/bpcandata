@@ -555,16 +555,9 @@ read_lfs_pumf <- function(dir) {
     factor_labels <- d |>
         dplyr::filter(is_factor) |>
         dplyr::select(-var_label, -is_factor, -var_universe) |>
-        dplyr::group_nest(field_id, var_name, .key = "factor_labels") |>
-        dplyr::mutate(factor_labels = purrr::map2(var_name, factor_labels, ~ {
-            .y |>
-                dplyr::mutate(
-                    factor_label = forcats::fct_inorder(factor_label)
-                ) |>
-                setNames(c(glue::glue("{.x}"), glue::glue("{.x}_label")))
-        }))
+        dplyr::group_nest(field_id, var_name, .key = "factor_labels")
 
-    suppressMessages(dplyr::left_join(var_labels, factor_labels))
+    dplyr::left_join(var_labels, factor_labels, by = c("field_id", "var_name"))
 }
 
 #' Produce a data frame (tibble) with labelled vectors encoded as factors
@@ -580,16 +573,27 @@ encode_lfs_factors <- function(records, codebook) {
             NOC_10_code = NOC_10,
             NOC_43_code = NOC_43
         )
-    factors <- codebook[codebook$is_factor, ]
-    factor_labels <- factors$factor_labels
-    d <- suppressMessages(
-        purrr::reduce(factor_labels, .init = d, .f = dplyr::left_join)
-    )
+
+    labels <- codebook |> 
+        dplyr::filter(is_factor) 
+
+    seq_len(nrow(labels)) |> 
+        purrr::walk( function(i) {
+            d[[labels$var_name[i]]] <<- labelled::labelled(
+                d[[labels$var_name[i]]], 
+                labels$factor_labels[[i]]$factor_level |> 
+                    purrr::set_names(labels$factor_labels[[i]]$factor_label)
+            )
+        })
 
     d |>
-        dplyr::select(-c(factors[["var_name"]])) |>
-        dplyr::rename_all(~ stringr::str_remove(.x, "_label$")) |>
-        dplyr::select(c(colnames(records), dplyr::matches("_code$")))
+        labelled::set_variable_labels(
+            .labels = codebook$var_label |> 
+                purrr::set_names(codebook$var_name) |> 
+                as.list(),
+            .strict = FALSE
+        ) |> 
+        haven::as_factor()
 }
 
 #' Produce data documentation in standard Roxygen markdown
