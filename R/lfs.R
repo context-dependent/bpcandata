@@ -485,7 +485,7 @@ read_lfs_pumf <- function(dir) {
 .read_lfs_codebook <- function(dir) {
     path <- glue::glue("{dir}/LFS_PUMF_EPA_FGMD_codebook.csv")
 
-    d <- readr::read_csv(path, show_col_types = FALSE) |>
+    d <- readr::read_csv(path, show_col_types = FALSE, locale = readr::locale(encoding = "latin1")) |>
         janitor::clean_names() |>
         dplyr::transmute(
             var = variable_variable,
@@ -516,7 +516,8 @@ read_lfs_pumf <- function(dir) {
             ),
             factor_label = dplyr::case_when(
                 !is.na(field_id) ~ NA_character_,
-                TRUE ~ label
+                TRUE ~ label |> 
+                    stringr::str_replace_all("\u0096", "-")
             )
         ) |>
         tidyr::fill(field_id, var_name, var_label, var_universe) |>
