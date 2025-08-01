@@ -15,6 +15,7 @@ Imports:
     data.table,
     dplyr (>= 1.1.0),
     glue (>= 1.6.2),
+    labelled (>= 2.13.0),
     purrr (>= 1.0.1),
     readr (>= 2.1.4)
 Suggests: 
