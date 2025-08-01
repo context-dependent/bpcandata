@@ -17,7 +17,8 @@ Imports:
     glue (>= 1.6.2),
     labelled (>= 2.13.0),
     purrr (>= 1.0.1),
-    readr (>= 2.1.4)
+    readr (>= 2.1.4),
+    vroom (>= 1.6.5)
 Suggests: 
     knitr,
     rmarkdown,
