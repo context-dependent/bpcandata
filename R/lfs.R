@@ -8,12 +8,14 @@
 fetch_lfs_pumf <- function(
     years, cache_dir = here::here(),
     refresh_cache = FALSE,
-    keep_zip = FALSE) {
+    keep_zip = FALSE,
+    extract = TRUE) {
     years |>
         purrr::walk(
             .fetch_single_year,
             cache_dir = cache_dir,
             refresh_cache = refresh_cache,
+            extract = extract,
             keep_zip = keep_zip
         )
 }
@@ -81,7 +83,7 @@ read_lfs_pumf <- function(path) {
 read_lfs_records <- function(path) {
     .find <- zip_dir_ls(path)
 
-    .find(path, glob = "pub*.csv", recurse = FALSE) |>
+    .find(path, glob = "*pub*.csv", recurse = FALSE) |>
         vroom::vroom(
             delim = ",",
             progress = FALSE,

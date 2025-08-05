@@ -5,9 +5,21 @@
 \alias{.fetch_single_year}
 \title{Download LFS PUMF data from StatCan website}
 \usage{
-fetch_lfs_pumf(years, cache_dir = here::here(), refresh_cache = FALSE)
+fetch_lfs_pumf(
+  years,
+  cache_dir = here::here(),
+  refresh_cache = FALSE,
+  keep_zip = FALSE,
+  extract = TRUE
+)
 
-.fetch_single_year(year, cache_dir, refresh_cache = FALSE)
+.fetch_single_year(
+  year,
+  cache_dir,
+  refresh_cache = FALSE,
+  extract = TRUE,
+  keep_zip = FALSE
+)
 }
 \arguments{
 \item{years}{A vector of years to download}
