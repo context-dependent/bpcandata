@@ -46,6 +46,45 @@ fetch_lfs_pumf <- function(
     invisible()
 }
 
+.fetch_single_month <- function(
+    cache_dir,
+    year,
+    month,
+    refresh_cache = FALSE) {
+
+    month <- stringr::str_pad(month, 2, pad = "0")
+    month_file <- glue::glue("pub{month}{year-2000}.csv")
+
+    if (!refresh_cache && fs::file_exists(glue::glue("{cache_dir}/{year}/{month_file}"))) {
+        message(
+            glue::glue(
+                "Skipping {year}-{month} as it is already cached,",
+                " set refresh_cache = TRUE to force download."
+            )
+        )
+        return(invisible())
+    }
+
+    u <- glue::glue(
+        "https://www150.statcan.gc.ca/",
+        "n1/pub/71m0001x/2021001/{year}-{month}-CSV.zip"
+    )
+    zip_path <- glue::glue("{cache_dir}/{year}-{month}-CSV.zip")
+    csv_dir <- glue::glue("{cache_dir}/{year}")
+
+    if (!fs::dir_exists(csv_dir)) fs::dir_create(csv_dir)
+    curl::curl_fetch_disk(u, zip_path)
+
+    files <- NULL
+
+    if (fs::file_exists(glue::glue("{csv_dir}/LFS_PUMF_EPA_FGMD_codebook.csv"))) {
+      files <- month_file
+    }
+    unzip(zip_path, files = files, exdir = csv_dir)
+    fs::file_delete(zip_path)
+    invisible()
+}
+
 #' Read LFS PUMF
 #' @param dir The directory containing the LFS PUMF (e.g. data/raw/2020)
 #' @return A list with two elements: records and codebook
@@ -483,7 +522,7 @@ read_lfs_pumf <- function(dir) {
 
 #' @rdname read_lfs_pumf
 .read_lfs_codebook <- function(dir) {
-    path <- glue::glue("{dir}/LFS_PUMF_EPA_FGMD_codebook.csv")
+    path <- fs::dir_ls(dir, recurse = TRUE, glob = "*codebook.csv")
 
     d <- readr::read_csv(path, show_col_types = FALSE, locale = readr::locale(encoding = "latin1")) |>
         janitor::clean_names() |>
