@@ -102,7 +102,8 @@ read_lfs_records <- function(path) {
                 DURJLESS = vroom::col_integer(),
                 TENURE = vroom::col_integer(),
                 PAIDOT = vroom::col_double(),
-                UNPAIDOT = vroom::col_double()
+                UNPAIDOT = vroom::col_double(), 
+                FINALWT = vroom::col_double()
             )
         ) |>
         .correct_decimal_placement()
@@ -403,8 +404,16 @@ roxygenize_lfs_codebook <- function(records, codebook, year) {
 #' @export
 generate_lfs_bootstrap_weights <- function(d, n_reps) {
     uncalibrated_weights <- .generate_replicates(d$FINALWT, n_reps)
+    sex_or_gender <- vector("character", length = nrow(d))
+
+    if ("SEX" %in% colnames(d)) {
+        sex_or_gender <- d$SEX
+    } else if ("GENDER" %in% colnames(d)) {
+        sex_or_gender <- d$GENDER
+    }
+
     age_tabs <- .calculate_age_tabs(d$AGE_6, d$AGE_12)
-    domains <- interaction(d$SURVYEAR, d$SURVMNTH, d$PROV, d$SEX, age_tabs)
+    domains <- interaction(d$SURVYEAR, d$SURVMNTH, d$PROV, sex_or_gender, age_tabs)
 
     .calibrate_weights(uncalibrated_weights, d$FINALWT, domains)
 }
